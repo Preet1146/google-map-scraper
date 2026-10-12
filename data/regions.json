@@ -1,0 +1,50 @@
+{
+ "North India": [
+  "Punjab",
+  "Haryana",
+  "Himachal Pradesh",
+  "Uttarakhand",
+  "Delhi",
+  "Chandigarh",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Rajasthan",
+  "Uttar Pradesh"
+ ],
+ "South India": [
+  "Andhra Pradesh",
+  "Karnataka",
+  "Kerala",
+  "Tamil Nadu",
+  "Telangana",
+  "Puducherry",
+  "Lakshadweep",
+  "Andaman and Nicobar Islands"
+ ],
+ "East India": [
+  "Bihar",
+  "Jharkhand",
+  "Odisha",
+  "West Bengal"
+ ],
+ "West India": [
+  "Gujarat",
+  "Maharashtra",
+  "Goa",
+  "Dadra and Nagar Haveli and Daman and Diu"
+ ],
+ "Central India": [
+  "Madhya Pradesh",
+  "Chhattisgarh"
+ ],
+ "North East India": [
+  "Arunachal Pradesh",
+  "Assam",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Tripura",
+  "Sikkim"
+ ]
+}

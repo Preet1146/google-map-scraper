@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maps Scraper Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0e17; --panel: #111827; --panel2: #0d1320; --line: #1f2937;
+    --text: #e5e7eb; --muted: #94a3b8; --blue: #2563eb; --green: #10b981; --term: #02050f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.4 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; padding: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
+  .config { padding: 24px; margin-bottom: 24px; }
+  h2 { margin: 0 0 20px; font-size: 18px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
+  .field { flex: 1 1 220px; }
+  label.lbl, .lbl { display: block; color: var(--muted); margin-bottom: 8px; }
+  select { width: 100%; height: 42px; background: var(--panel2); color: var(--text);
+    border: 1px solid #263244; border-radius: 10px; padding: 0 14px; font: inherit; }
+  select:focus { outline: 2px solid var(--blue); }
+  .toggle { display: flex; align-items: center; gap: 10px; height: 42px; cursor: pointer; user-select: none; }
+  .toggle input { display: none; }
+  .sw { width: 44px; height: 24px; border-radius: 12px; background: #374151; position: relative; transition: .2s; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+               border-radius: 50%; background: #fff; transition: .2s; }
+  .toggle input:checked + .sw { background: var(--blue); }
+  .toggle input:checked + .sw::after { left: 23px; }
+  .states { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .state { height: 46px; padding: 0 22px; border-radius: 12px; font-weight: 600; font-size: 15px; }
+  .state.live.sel { background: var(--blue); border-color: var(--blue); box-shadow: 0 6px 20px #2563eb55; }
+  button.primary { background: var(--blue); border-color: var(--blue); box-shadow: 0 6px 20px #2563eb55; }
+  .state.soon { opacity: .35; }
+  .state small { font-weight: 400; opacity: .8; margin-left: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
+          background: var(--panel2); border: 1px solid #263244; cursor: pointer; user-select: none; }
+  .chip input { accent-color: var(--blue); }
+  .chip.kw { cursor: default; color: var(--muted); }
+  .links { margin-left: 10px; color: #60a5fa; cursor: pointer; font-size: 13px; }
+  .section { margin-top: 20px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+         border-top: 1px solid var(--line); margin-top: 22px; padding-top: 20px; }
+  .mode { color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+  .dot.busy { background: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; }
+  button { height: 44px; padding: 0 20px; border-radius: 10px; border: 1px solid #263244;
+           background: #1a2332; color: var(--text); font: inherit; font-weight: 500; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.danger { background: #7f1d1d; border-color: #991b1b; }
+  .prog { height: 6px; background: var(--panel2); border-radius: 3px; margin-top: 16px; overflow: hidden; }
+  .prog i { display: block; height: 100%; width: 0; background: var(--blue); transition: width .4s; }
+  .grid { display: grid; grid-template-columns: minmax(280px, 1fr) 2.4fr; gap: 24px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .term { overflow: hidden; display: flex; flex-direction: column; height: 62vh; }
+  .term header, .recs header { display: flex; align-items: center; gap: 8px; padding: 14px 18px;
+                               border-bottom: 1px solid var(--line); }
+  .tl { width: 12px; height: 12px; border-radius: 50%; }
+  .term .name { font-family: ui-monospace, Consolas, monospace; color: var(--muted); margin-left: 8px; }
+  .term .clear { margin-left: auto; background: none; border: 0; height: auto; padding: 0; color: var(--muted); }
+  #log { background: var(--term); flex: 1; overflow: auto; padding: 18px; margin: 0;
+         font: 12.5px/1.7 ui-monospace, Consolas, monospace; color: #7a8aa3; white-space: pre-wrap; }
+  #log .sys { color: #5b6b86; } #log .err { color: #f87171; } #log .ok { color: #34d399; }
+  #log .hd { color: #93c5fd; }
+  .recs { overflow: hidden; display: flex; flex-direction: column; height: 62vh; }
+  .recs header { justify-content: space-between; font-weight: 600; }
+  .recs .count { color: var(--muted); font-weight: 400; }
+  .tw { overflow: auto; flex: 1; position: relative; }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: left; color: var(--muted);
+       padding: 14px 16px; border-bottom: 1px solid var(--line); z-index: 1; }
+  td { padding: 10px 16px; border-bottom: 1px solid #172033; vertical-align: top; max-width: 260px;
+       overflow-wrap: anywhere; }
+  td a { color: #60a5fa; text-decoration: none; }
+  #empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+           justify-content: center; color: var(--muted); gap: 12px; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+<div id="warn" hidden style="background:#7f1d1d;border:1px solid #991b1b;border-radius:12px;padding:14px 18px;margin-bottom:16px">
+  This page was opened as a file, so it can't talk to the scraper. Close it and double-click <b>start_dashboard.bat</b>
+  (or run <code>python dashboard.py</code>) — it opens the dashboard at <b>http://127.0.0.1:8000</b>.
+</div>
+
+<section class="card config">
+  <h2>⚙ Scraper Configuration</h2>
+
+  <div class="lbl">1. Pick a region</div>
+  <div class="states" id="regions"></div>
+
+  <div id="stateBox" hidden>
+    <div class="lbl">2. Pick a state</div>
+    <div class="states" id="states"></div>
+  </div>
+
+  <div class="section" id="districtBox" hidden>
+    <div class="lbl">3. Districts <span class="links" id="dAll">Select all</span><span class="links" id="dDef">First batch</span><span class="links" id="dNone">Clear</span></div>
+    <div class="chips" id="districts"></div>
+  </div>
+  <div class="section">
+    <div class="lbl">Keywords searched in every district</div>
+    <div class="chips" id="keywords"></div>
+  </div>
+
+  <div class="row section">
+    <div class="field" style="max-width:320px">
+      <label class="lbl" for="max">Max Cards per Search</label>
+      <select id="max">
+        <option value="20">20 listings</option>
+        <option value="50">50 listings</option>
+        <option value="100">100 listings</option>
+        <option value="100000" selected>All Available Listings (Unlimited)</option>
+      </select>
+    </div>
+    <div class="field" style="max-width:260px">
+      <label class="lbl" for="fmt">Output Format</label>
+      <select id="fmt">
+        <option value="csv">CSV File (.csv)</option>
+        <option value="xlsx">Excel File (.xlsx)</option>
+        <option value="json">JSON File (.json)</option>
+      </select>
+    </div>
+    <label class="toggle"><input id="emails" type="checkbox" checked><span class="sw"></span>Scrape Web Emails</label>
+    <label class="toggle"><input id="show" type="checkbox"><span class="sw"></span>Show browser</label>
+    <label class="toggle" title="Off: a selection you already scraped is loaded from its saved CSV instead of scraping again"><input id="fresh" type="checkbox"><span class="sw"></span>Fresh scrape (ignore saved)</label>
+  </div>
+
+  <div class="bar">
+    <div class="mode"><span class="dot" id="dot"></span><span id="mode"></span></div>
+    <div class="btns">
+      <button class="primary" id="run">▶ Run Scraper</button>
+      <button class="danger" id="stop" hidden>■ Stop</button>
+      <button id="dl" disabled>⬇ Download</button>
+      <button id="dlj" disabled>⬇ Download JSON</button>
+    </div>
+  </div>
+  <div class="prog"><i id="bar"></i></div>
+</section>
+
+<div class="grid">
+  <section class="card term">
+    <header><span class="tl" style="background:#ef4444"></span><span class="tl" style="background:#eab308"></span><span class="tl" style="background:#22c55e"></span>
+      <span class="name">playwright-terminal</span><button class="clear" id="clear">Clear</button></header>
+    <pre id="log"></pre>
+  </section>
+  <section class="card recs">
+    <header><span>▤ Extracted Business Records</span><span class="count" id="count">0 duplicates removed</span></header>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Website</th><th>Email</th><th>Address</th><th>District/State</th><th>Type</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty"><div style="font-size:34px">📥</div>No data scraped yet. Pick a state and click “Run Scraper”.</div>
+    </div>
+  </section>
+</div>
+
+<script src="config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const API = (window.API_BASE || "").replace(/\/$/, "");
+let TOKEN = ""; try { TOKEN = localStorage.getItem("scraper_token") || ""; } catch (e) {}
+function withToken(path) { return API + path + (path.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN); }
+async function api(path, opts) {
+  let res = await fetch(withToken(path), opts);
+  if (res.status === 401) {
+    const t = prompt("Access token for this scraper server:");
+    if (!t) return res;
+    TOKEN = t; try { localStorage.setItem("scraper_token", t); } catch (e) {}
+    res = await fetch(withToken(path), opts);
+  }
+  return res;
+}
+const IDLE = "Mode: Card DOM Extraction (Zero Clicks / Fast & Safe)";
+let logN = 0, rowN = 0, updN = 0, emailCells = [], timer = null, total = 0, cfg = null, cur = null;
+
+function addLog(text, cls) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.textContent = text;
+  $("log").appendChild(d);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+if (location.protocol === "file:" && !API) $("warn").hidden = false;
+addLog("[System] Playwright Scraper Engine initialized.", "sys");
+
+function chip(parent, label, checked, cls) {
+  const l = document.createElement("label");
+  l.className = "chip " + (cls || "");
+  const i = document.createElement("input");
+  i.type = "checkbox"; i.checked = checked; i.value = label;
+  if (cls === "kw") i.disabled = true;
+  l.append(i, document.createTextNode(label));
+  parent.appendChild(l);
+  return i;
+}
+function renderDistricts(st) {
+  cur = st; $("districts").innerHTML = "";
+  st.districts.forEach(d => chip($("districts"), d, st.defaults.includes(d)));
+}
+function checkedDistricts() { return [...$("districts").querySelectorAll("input:checked")].map(i => i.value); }
+function setAll(v) { $("districts").querySelectorAll("input").forEach(i => i.checked = v); }
+
+async function init() {
+  try { cfg = await (await api("/api/config")).json(); }
+  catch (e) { addLog("Cannot reach the scraper server. Is the backend running? (locally: start_dashboard.bat, then open http://127.0.0.1:8000)", "err"); return; }
+  if (!cfg.regions) { addLog("The scraper server is running old code (no regions in /api/config). Close it and restart start_dashboard.bat.", "err"); return; }
+  cfg.keywords.forEach(k => chip($("keywords"), k, true, "kw"));
+  cfg.regions.forEach(rg => {
+    const b = document.createElement("button");
+    b.className = "state live";
+    b.append(rg.name);
+    const n = document.createElement("small");
+    n.textContent = rg.states.length;
+    b.append(n);
+    b.onclick = () => selectRegion(rg, b);
+    $("regions").appendChild(b);
+  });
+  setBusy(false);
+}
+
+function selectRegion(rg, btn) {
+  if (timer) return;  // don't switch while a run is in progress
+  document.querySelectorAll("#regions .state").forEach(x => x.classList.remove("sel"));
+  btn.classList.add("sel");
+  cur = null; $("districts").innerHTML = ""; $("districtBox").hidden = true;
+  $("states").innerHTML = ""; $("stateBox").hidden = false;
+  rg.states.forEach(st => {
+    const b = document.createElement("button");
+    b.className = "state " + (st.enabled ? "live" : "soon");
+    b.disabled = !st.enabled;
+    b.append(st.name);
+    const n = document.createElement("small");
+    n.textContent = st.enabled ? st.districts.length : "soon";
+    b.append(n);
+    b.onclick = () => selectState(st, b);
+    $("states").appendChild(b);
+  });
+}
+
+function selectState(st, btn) {
+  if (timer) return;
+  document.querySelectorAll("#states .state").forEach(x => x.classList.remove("sel"));
+  btn.classList.add("sel");
+  $("districtBox").hidden = false;
+  renderDistricts(st);
+}
+
+function cell(tr, text, link) {
+  const td = document.createElement("td");
+  if (link && text) {
+    const a = document.createElement("a");
+    a.href = text; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = text.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+    td.appendChild(a);
+  } else td.textContent = text || "—";
+  tr.appendChild(td);
+}
+function addRow(r) {
+  const tr = document.createElement("tr");
+  cell(tr, r.name); cell(tr, r.phone); cell(tr, r.website, true); cell(tr, r.email);
+  emailCells.push(tr.children[3]);
+  cell(tr, r.address); cell(tr, [r.district, r.state].filter(Boolean).join(", ")); cell(tr, r.search_keyword);
+  $("rows").appendChild(tr);
+  $("empty").hidden = true;
+  total++; updDl();
+}
+function updDl() { $("dl").disabled = $("dlj").disabled = total === 0; }
+function setBusy(b, prog) {
+  document.querySelectorAll(".state.live").forEach(x => x.disabled = b);  // lock region + state while running
+  $("run").disabled = b; $("run").hidden = b;
+  $("stop").hidden = !b;
+  $("dot").classList.toggle("busy", b);
+  $("mode").textContent = b ? (prog && prog[1] ? `Running — search ${Math.min(prog[0] + 1, prog[1])} of ${prog[1]}, rows appear live...` : "Starting...") : IDLE;
+  $("bar").style.width = prog && prog[1] ? (100 * prog[0] / prog[1]) + "%" : (b ? "0" : $("bar").style.width);
+  updDl();
+}
+async function poll() {
+  try {
+    const s = await (await api(`/api/state?log=${logN}&row=${rowN}&upd=${updN}`)).json();
+    s.logs.forEach(l => addLog(l, /ERROR|failed/.test(l) ? "err" : /\] (Done|Saved)/.test(l) ? "ok" : /\] \[\d+\/\d+\]/.test(l) ? "hd" : ""));
+    s.rows.forEach(addRow);
+    s.updates.forEach(([i, e]) => { if (emailCells[i]) emailCells[i].textContent = e; });
+    logN = s.log_n; rowN = s.row_n; updN = s.upd_n;
+    $("count").textContent = `${s.dupes} duplicates removed`;
+    if (s.running) setBusy(true, s.progress);
+    else {
+      clearInterval(timer); timer = null; setBusy(false, s.progress);
+      if (s.complete && total > 0) {  // finished (or served from the saved copy): download it now
+        addLog(s.cached ? "Loaded from saved file - downloading it." : "Scrape complete - downloading and saved in the project output folder.", "ok");
+        location.href = withToken("/download?fmt=" + $("fmt").value);
+      }
+    }
+  } catch (e) { /* server briefly busy; try again */ }
+}
+async function start() {
+  const st = cur;
+  if (!st) { addLog("Pick a region and a state first.", "err"); return; }
+  const districts = checkedDistricts();
+  if (!districts.length) { addLog("Select at least one district first.", "err"); return; }
+  $("rows").innerHTML = ""; $("empty").hidden = false; total = 0; logN = rowN = updN = 0; emailCells = [];
+  $("log").innerHTML = ""; $("bar").style.width = "0";
+  let res;
+  try {
+    res = await api("/api/start", { method: "POST", body: JSON.stringify({
+      state: st.name, districts, keywords: cfg.keywords, max: +$("max").value,
+      emails: $("emails").checked, show_browser: $("show").checked, fresh: $("fresh").checked }) });
+  } catch (e) {
+    addLog("Cannot reach the scraper server. Is the backend running? (locally: start_dashboard.bat, then open http://127.0.0.1:8000)", "err");
+    return;
+  }
+  if (!res.ok) { addLog("Could not start: " + (await res.text()), "err"); return; }
+  setBusy(true);
+  timer = setInterval(poll, 1000);
+}
+$("run").onclick = start;
+$("stop").onclick = () => api("/api/stop", { method: "POST", body: "{}" });
+$("dl").onclick = () => location.href = withToken("/download?fmt=" + $("fmt").value);
+$("dlj").onclick = () => location.href = withToken("/download?fmt=json");
+$("clear").onclick = () => $("log").innerHTML = "";
+$("dAll").onclick = () => setAll(true);
+$("dNone").onclick = () => setAll(false);
+$("dDef").onclick = () => { setAll(false); $("districts").querySelectorAll("input").forEach(i => i.checked = cur.defaults.includes(i.value)); };
+$("fmt").onchange = () => { $("dl").textContent = "⬇ Download " + $("fmt").selectedOptions[0].text.split(" ")[0]; };
+$("fmt").onchange();
+$("mode").textContent = IDLE;
+init();
+</script>
+</body>
+</html>

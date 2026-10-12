@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: maps-scraper
+    runtime: docker
+    region: singapore        # closest to India; EU regions trigger Google consent pages
+    plan: starter            # Chromium needs more than the 512 MB free tier
+    healthCheckPath: /health
+    envVars:
+      - key: DASH_TOKEN      # set a secret in the Render dashboard
+        sync: false
+      - key: ALLOWED_ORIGIN  # set to your Vercel URL, e.g. https://my-scraper.vercel.app
+        sync: false
